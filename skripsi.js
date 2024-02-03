@@ -298,8 +298,10 @@ function readTrainingAndTestDataFromCSV(trainingFilename, testFilename) {
         for (const term of uniqueTermsCombined) {
             const item = tfidfData.find(item => item.term === term);
             // console.log(item)
-            const sentiment = combinedData[item.documentIndex - 1].sentiment || ''; // Assuming sentiment is present in the combined data
-            csvOutputCombined += `${term},${item.TF},${item.DF},${item.IDF},${item.TFIDF},${sentiment}\n`;
+            const sentiment = combinedData[item.documentIndex - 1].sentiment || ''; 
+            const dfSentimenPos = dfSentimenPositive[term] || 0;
+            const dfSentimenNeg = dfSentimenNegative[term] || 0;
+            csvOutputCombined += `${term},${item.TF},${item.DF},${item.IDF},${item.TFIDF},${sentiment},${dfSentimenPos},${dfSentimenNeg}\n`;
         }
         const tfidfDataTraining = calculateTFIDF(trainingData);
 
@@ -328,7 +330,9 @@ function readTrainingAndTestDataFromCSV(trainingFilename, testFilename) {
             const item = tfidfDataTraining.find(item => item.term === term);
             // console.log(item)
             const sentiment = combinedData[item.documentIndex - 1].sentiment || '';
-            csvOutputTraining += `${term},${item.TF},${item.DF},${item.IDF},${item.TFIDF},${sentiment}\n`;
+            const dfSentimenPos = dfSentimenPositive[term] || 0;
+            const dfSentimenNeg = dfSentimenNegative[term] || 0;
+            csvOutputTraining += `${term},${item.TF},${item.DF},${item.IDF},${item.TFIDF},${sentiment},${dfSentimenPos},${dfSentimenNeg}\n`;
         }
 
         csvOutputTraining += `\nTotal DF Training Sentimen Positive,${totalDfTrainingSentimentPositive}\n`;
