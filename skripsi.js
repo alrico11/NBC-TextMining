@@ -16,13 +16,11 @@ console.log(
     )
 );
 
-let o = 1;
+let incrementJudul = 1;
 const Judul = [];
 let trainingData = [];
 let testData = [];
-let combinedData = []
-let positiveSentimentTFIDF
-let negativeSentimentTFIDF
+let totalV;
 let totalDfTrainingSentimentPositive = 0;
 let totalDfTrainingSentimentNegative = 0;
 
@@ -42,7 +40,7 @@ async function getNewsFromURL() {
                 // tfidf.addDocument(stemmer.tokenizeAndStem(judulBerita));
             }
 
-            o += 12;
+            incrementJudul += 12;
         } catch (err) {
             console.error('Error:', err.message);
         }
@@ -184,7 +182,7 @@ function calculateTFIDF(data) {
     });
 
     for (const term in documentFrequency) {
-        inverseDocumentFrequency[term] = Math.log10(documentCount / documentFrequency[term]);
+        inverseDocumentFrequency[term] = Math.log10(documentCount / documentFrequency[term]).toFixed(5);
     }
 
     const tfidfData = [];
@@ -262,11 +260,13 @@ function readTrainingAndTestDataFromCSV(trainingFilename, testFilename) {
                 testData.push(dataItem);
             }
         }
+        let csvOutputTraining = 'Term,TF,DF,IDF,TF-IDF,Total Dokumen Sentimen Positive,Total Sentimen Negative\n';
+        let csvOutputTest = 'Term,TF,DF,IDF,TF-IDF\n';
+        let csvOutputCombined = 'Term,TF,DF,IDF,TF-IDF,Total Sentimen Positive,Total Sentimen Negative\n';
 
         // Combine training and test data
         combinedData = [...trainingData, ...testData];
 
-        // Calculate TF-IDF for combined data
         const tfidfData = calculateTFIDF(combinedData);
         // Attach TF-IDF to each item in combinedData
         for (let i = 0; i < combinedData.length; i++) {
@@ -291,17 +291,14 @@ function readTrainingAndTestDataFromCSV(trainingFilename, testFilename) {
                 }
             });
         }
-        let csvOutputTraining = 'Term,TF,DF,IDF,TF-IDF,Sentimen\n';
-        let csvOutputCombined = 'Term,TF,DF,IDF,TF-IDF,Sentimen\n';
+
         const uniqueTermsCombined = Array.from(new Set(tfidfData.map(item => item.term)));
 
         for (const term of uniqueTermsCombined) {
             const item = tfidfData.find(item => item.term === term);
-            // console.log(item)
-            const sentiment = combinedData[item.documentIndex - 1].sentiment || ''; 
             const dfSentimenPos = dfSentimenPositive[term] || 0;
             const dfSentimenNeg = dfSentimenNegative[term] || 0;
-            csvOutputCombined += `${term},${item.TF},${item.DF},${item.IDF},${item.TFIDF},${sentiment},${dfSentimenPos},${dfSentimenNeg}\n`;
+            csvOutputCombined += `${term},${item.TF},${item.DF},${item.IDF},${item.TFIDF},${dfSentimenPos},${dfSentimenNeg}\n`;
         }
         const tfidfDataTraining = calculateTFIDF(trainingData);
 
@@ -328,32 +325,50 @@ function readTrainingAndTestDataFromCSV(trainingFilename, testFilename) {
 
         for (const term of uniqueTermsTraining) {
             const item = tfidfDataTraining.find(item => item.term === term);
-            // console.log(item)
-            const sentiment = combinedData[item.documentIndex - 1].sentiment || '';
             const dfSentimenPos = dfSentimenPositive[term] || 0;
             const dfSentimenNeg = dfSentimenNegative[term] || 0;
-            csvOutputTraining += `${term},${item.TF},${item.DF},${item.IDF},${item.TFIDF},${sentiment},${dfSentimenPos},${dfSentimenNeg}\n`;
+            csvOutputTraining += `${term},${item.TF},${item.DF},${item.IDF},${item.TFIDF},${dfSentimenPos},${dfSentimenNeg}\n`;
+        }
+        totalV = uniqueTermsTraining.length
+        const tfidfDataTest = calculateTFIDF(testData);
+        for (let i = 0; i < trainingData.length; i++) {
+            const documentIndex = i + 1;
+            trainingData[i].TFIDF = tfidfDataTest.filter((item) => item.documentIndex === documentIndex);
+            trainingData[i].dfSentimenPos = {};
+            trainingData[i].dfSentimenNeg = {};
+
+            const terms = trainingData[i].text.split(',');
+
+            terms.forEach(term => {
+                trainingData[i].dfSentimenPos[term] = dfSentimenPositive[term] || 0;
+                trainingData[i].dfSentimenNeg[term] = dfSentimenNegative[term] || 0;
+
+                const tfidfItem = trainingData[i].TFIDF.find(item => item.term === term);
+                if (tfidfItem) {
+                    tfidfItem.dfSentimenPos = trainingData[i].dfSentimenPos[term];
+                    tfidfItem.dfSentimenNeg = trainingData[i].dfSentimenNeg[term];
+                }
+            });
+        }
+        const uniqueTermsTestData = Array.from(new Set(tfidfDataTest.map(item => item.term)));
+
+        for (const term of uniqueTermsTestData) {
+            const item = tfidfDataTest.find(item => item.term === term);
+            csvOutputTest += `${term},${item.TF},${item.DF},${item.IDF},${item.TFIDF}\n`;
         }
 
-        csvOutputTraining += `\nTotal DF Training Sentimen Positive,${totalDfTrainingSentimentPositive}\n`;
-        csvOutputTraining += `Total DF Training Sentimen Negative,${totalDfTrainingSentimentNegative}\n`;
-
-        fs.writeFileSync('TF-IDF-Combined.csv', csvOutputCombined, 'utf-8');
+        csvOutputTraining += `\nTotal Document Training Sentimen Positive,${totalDfTrainingSentimentPositive}\n`;
+        csvOutputTraining += `Total Document Training Sentimen Negative,${totalDfTrainingSentimentNegative}\n`;
         fs.writeFileSync('TF-IDF-Training.csv', csvOutputTraining, 'utf-8');
-        console.log('Data TF-IDF Combined telah disimpan dalam TF-IDF-Combined.csv');
-        combinedData = trainingData.concat(testData);
-        // console.log(trainingData)
+        fs.writeFileSync('TF-IDF-TestData.csv', csvOutputTest, 'utf-8');
     } catch (error) {
         console.error('Error:', error.message);
     }
 }
 
-// Function to calculate Naive Bayes probabilities
-
-function calculateNaiveBayesProbabilities(testData, combinedData) {
+function calculateNaiveBayesProbabilities(testData) {
     let csvData;
     try {
-        let totalV = 0;
 
         const resultObject = {
             terms: [],
@@ -370,15 +385,6 @@ function calculateNaiveBayesProbabilities(testData, combinedData) {
             }
         }
 
-        const uniqueTermsSet = new Set();
-
-        for (const item of combinedData) {
-            for (const tfidfItem of item.TFIDF) {
-                // Add each term to the set
-                uniqueTermsSet.add(tfidfItem.term);
-            }
-        }
-        totalV = uniqueTermsSet.size;
         for (let i = 0; i < testData.length; i++) {
             let probDocPositive = 0;
             let probDocNegative = 0;
@@ -544,7 +550,7 @@ async function menu() {
             break;
         case "6":
             readTrainingAndTestDataFromCSV("training.csv", "preprocessed_berita.csv");
-            calculateNaiveBayesProbabilities(testData, combinedData);
+            calculateNaiveBayesProbabilities(testData);
             menu();
             break;
         case "7":
