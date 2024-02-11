@@ -368,7 +368,6 @@ function readTrainingAndTestDataFromCSV(trainingFilename, testFilename) {
 
 function calculateNaiveBayesProbabilities(testData) {
     let csvData;
-
     try {
 
         const resultObject = {
@@ -389,8 +388,6 @@ function calculateNaiveBayesProbabilities(testData) {
         for (let i = 0; i < testData.length; i++) {
             let probDocPositive = 0;
             let probDocNegative = 0;
-            let probNegArr = [totalDfTrainingSentimentNegative / totalV]
-            let probPosArr = [totalDfTrainingSentimentPositive / totalV]
 
             const textKey = testData[i].text.join(',');
             const logs = [];
@@ -401,27 +398,27 @@ function calculateNaiveBayesProbabilities(testData) {
                 let negativeProbability = (testData[i].TFIDF[j].dfSentimenNeg + 1) / (totalDfTrainingSentimentNegative + totalV);
                 probDocPositive += positiveProbability;
                 probDocNegative += negativeProbability;
-                probPosArr.push(probDocPositive)
-                probNegArr.push(probDocNegative)
-                logs.push(`P(${term}|Positif)=(${testData[i].TFIDF[j].dfSentimenPos}+1)/(${totalDfTrainingSentimentPositive}+${totalV})=${positiveProbability.toFixed(15)}`);
-                logs.push(`P(${term}|Negatif)=(${testData[i].TFIDF[j].dfSentimenNeg}+1)/(${totalDfTrainingSentimentNegative}+${totalV})=${negativeProbability.toFixed(15)}`);
+                logs.push(`P(${term}|Positif)=(${testData[i].TFIDF[j].dfSentimenPos}+1)/(${totalDfTrainingSentimentPositive}+${totalV})=${positiveProbability.toFixed(5)}`);
+                logs.push(`P(${term}|Negatif)=(${testData[i].TFIDF[j].dfSentimenNeg}+1)/(${totalDfTrainingSentimentNegative}+${totalV})=${negativeProbability.toFixed(5)}`);
             }
-            let probPos = probPosArr.reduce((total, current) => total * current, 1);
-            let probNeg = probNegArr.reduce((total, current) => total * current, 1);
-            logs.push(`Total P( Positif ) = ${probPos.toFixed(15)}`);
-            logs.push(`Total P( Negatif ) = ${probNeg.toFixed(15)}`);
+
+            logs.push(`Total P( Positif ) = ${probDocPositive.toFixed(5)}`);
+            logs.push(`Total P( Negatif ) = ${probDocNegative.toFixed(5)}`);
+
             console.log(`${i+1}. Dokumen ke-${i+1} (${textKey})`);
             logs.forEach(log => console.log(log));
-            if (probNeg > probPos) {
+            if (probDocNegative > probDocPositive) {
+
                 resultObject.terms.push(textKey);
-                resultObject.positiveProbabilities.push(probPos.toFixed(15));
-                resultObject.negativeProbabilities.push(probNeg.toFixed(15));
+                resultObject.positiveProbabilities.push(probDocPositive.toFixed(5));
+                resultObject.negativeProbabilities.push(probDocNegative.toFixed(5));
                 resultObject.predictedSentiments.push('Negative');
                 console.log(`Berdasarkan perbandingan total probabilitas sentimen positif dan negatif, maka dokumen ke-${i+1} bersentimen negatif`)
             } else {
+
                 resultObject.terms.push(textKey);
-                resultObject.positiveProbabilities.push(probPos.toFixed(15));
-                resultObject.negativeProbabilities.push(probNeg.toFixed(15));
+                resultObject.positiveProbabilities.push(probDocPositive.toFixed(5));
+                resultObject.negativeProbabilities.push(probDocNegative.toFixed(5));
                 resultObject.predictedSentiments.push('Positive');
                 console.log(`Berdasarkan perbandingan total probabilitas sentimen positif dan negatif, maka dokumen ke-${i+1} bersentimen positif`)
             }
